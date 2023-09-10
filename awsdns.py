@@ -14,8 +14,8 @@ parser.add_argument("--rr", type=str, required=True, help="子域名")
 parser.add_argument("--ttl", type=str, default=1, help="记录值")
 parser.add_argument("--file", type=str, required=True, help="记录值")
 parser.add_argument("--port", type=int, required=True, help="记录值")
-parser.add_argument("--alikey", type=str, default='LTAI5tE8E6TT67PQSWRJKij4', help="YOUR_ACCESS_KEY_ID")
-parser.add_argument("--alista", type=str, default='aWuq0JtnKXZKYkt2jOvpMQDIKvo5uI', help="YOUR_ACCESS_SECRET")
+parser.add_argument("--alikey", type=str, default='LTAI5tEJKij4', help="YOUR_ACCESS_KEY_ID")
+parser.add_argument("--alista", type=str, default='aWuq0o5uI', help="YOUR_ACCESS_SECRET")
 args = parser.parse_args()
 
 # 初始化阿里云客户端
