@@ -14,8 +14,8 @@ parser.add_argument("--rr", type=str, required=True, help="子域名")
 parser.add_argument("--ttl", type=str, default=1, help="记录值")
 parser.add_argument("--file", type=str, required=True, help="记录值")
 parser.add_argument("--port", type=int, required=True, help="记录值")
-parser.add_argument("--alikey", type=str, default='LTAI5tEJKij4', help="YOUR_ACCESS_KEY_ID")
-parser.add_argument("--alista", type=str, default='aWuq0o5uI', help="YOUR_ACCESS_SECRET")
+parser.add_argument("--alikey", type=str, default='LTAI5tEQSWRJKij4', help="YOUR_ACCESS_KEY_ID")
+parser.add_argument("--alista", type=str, default='aWuIKvo5uI', help="YOUR_ACCESS_SECRET")
 args = parser.parse_args()
 
 # 初始化阿里云客户端
@@ -163,13 +163,20 @@ while True:
 
                 elif a['service'] == 'lightsail':  # 如果是Lightsail实例
                     try:
-                        a['client'].release_static_ip(staticIpName=k)
+                        a['client'].detach_static_ip(staticIpName=k + 'ipv4')
                     except Exception as e:
                         logger.error(f"{k}, {e}")
 
                     try:
-                        new_address = a['client'].allocate_static_ip(staticIpName=k)
-                        a['client'].attach_static_ip(instanceName=k, staticIpName=k, staticIp=new_address['staticIp']['ipAddress'])
+                        a['client'].release_static_ip(staticIpName=k + 'ipv4')
+                    except Exception as e:
+                        logger.error(f"{k}, {e}")
+                    try:
+                        a['client'].allocate_static_ip(staticIpName=k + 'ipv4')
+                    except Exception as e:
+                        logger.error(f"{k}, {e}")
+                    try:
+                        a['client'].attach_static_ip(staticIpName=k + 'ipv4', instanceName=k)
                     except Exception as e:
                         logger.error(f"{k}, {e}")
 
