@@ -7,15 +7,27 @@ import argparse
 from aliyunsdkcore.client import AcsClient
 from aliyunsdkalidns.request.v20150109 import DeleteDomainRecordRequest, AddDomainRecordRequest, DescribeDomainRecordsRequest
 
+
+# 获取环境变量，如果环境变量不存在，则使用后面的默认值
+default_domain = os.getenv('DOMAIN', 'default_domain.com')
+default_rr = os.getenv('RR', 'default_rr')
+default_ttl = os.getenv('TTL', '1')
+default_file = os.getenv('FILE', 'default_file.txt')
+default_port = os.getenv('PORT', '8080')
+default_alikey = os.getenv('ALIKEY', 'LTAI5tE8E6TT67PQSWRJKij4')
+default_alista = os.getenv('ALISTA', 'aWuq0JtnKXZKYkt2jOvpMQDIKvo5uI')
+default_api = os.getenv('api', '159.75.83.139')
+
 # 解析命令行参数
 parser = argparse.ArgumentParser(description="脚本用于获取记录ID")
-parser.add_argument("--domain", type=str, required=True, help="域名")
-parser.add_argument("--rr", type=str, required=True, help="子域名")
-parser.add_argument("--ttl", type=str, default=1, help="记录值")
-parser.add_argument("--file", type=str, required=True, help="记录值")
-parser.add_argument("--port", type=int, required=True, help="记录值")
-parser.add_argument("--alikey", type=str, default='LTAI5tEQSWRJKij4', help="YOUR_ACCESS_KEY_ID")
-parser.add_argument("--alista", type=str, default='aWuIKvo5uI', help="YOUR_ACCESS_SECRET")
+parser.add_argument("--domain", type=str, default=default_domain, help="域名")
+parser.add_argument("--rr", type=str, default=default_rr, help="子域名")
+parser.add_argument("--ttl", type=str, default=default_ttl, help="记录值")
+parser.add_argument("--file", type=str, default=default_file, help="文件路径")
+parser.add_argument("--port", type=int, default=int(default_port), help="端口号")
+parser.add_argument("--alikey", type=str, default=default_alikey, help="YOUR_ACCESS_KEY_ID")
+parser.add_argument("--alista", type=str, default=default_alista, help="YOUR_ACCESS_SECRET")
+parser.add_argument("--api", type=str, default=default_api, help="你的端口检测api")
 args = parser.parse_args()
 
 # 初始化阿里云客户端
@@ -80,17 +92,30 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # 检查是否能连接到指定IP和端口
-def connet(ip):
-    for i in range(2):
+def connect(ip):
+    api_url = f"http://{args.api}:10080/check_port"
+    retries = 3  # 设置重试次数
+
+    for attempt in range(retries):
         try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sc:
-                sc.settimeout(10)
-                if sc.connect_ex((ip,  args.port)) == 0:
-                    sc.shutdown(socket.SHUT_RDWR)
-                    return False
-        except:
-            pass
-    return True
+            response = requests.get(api_url, params={"ip": ip, "port": args.port}, timeout=10)
+            if response.status_code == 200:
+                try:
+                    result = response.json()
+                    return result.get("open", False)
+                except ValueError:  # 包括JSON解码错误
+                    print("无法解析JSON响应")
+            else:
+                print(f"API返回非200状态码：{response.status_code}")
+        except ConnectionError:
+            print("连接错误")
+        except Timeout:
+            print("请求超时")
+        except RequestException as e:
+            print(f"请求发生错误: {e}")
+
+        print(f"尝试 {attempt + 1}/{retries} 失败，正在重试...")
+    return False
 
 # 从文件加载AWS服务数据
 def load_aws():
@@ -138,7 +163,7 @@ while True:
             all_ips.append(v)  # 收集所有的IP地址
             current_region = a['region_name']  # 获取当前的region_name
             print(current_region)
-            if connet(v):  # 如果连接失败，我们认为需要更换 IP
+            if not connect(v):  # 如果连接失败，我们认为需要更换 IP
                 logger.info(f"{k}, {v}, attempting to change ip")
                 
                 if a['service'] == 'ec2':
@@ -223,5 +248,4 @@ while True:
                 logger.info(f"{k}, {v}, connect success")
     logger.info(all_ips)
     ensure_only_my_ips(args.domain, args.rr, 'A', all_ips)
-    time.sleep(3)
-
+    time.sleep(60)
