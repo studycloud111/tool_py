@@ -2,8 +2,11 @@ import boto3
 import socket
 import time
 import json
+import os
 import logging
 import argparse
+import requests
+from requests.exceptions import ConnectionError, Timeout, RequestException
 from aliyunsdkcore.client import AcsClient
 from aliyunsdkalidns.request.v20150109 import DeleteDomainRecordRequest, AddDomainRecordRequest, DescribeDomainRecordsRequest
 
