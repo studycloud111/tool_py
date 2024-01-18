@@ -2,9 +2,11 @@ import socket
 import time
 import uuid
 import json
-import requests
+import os
 import logging
 import argparse
+import requests
+from requests.exceptions import ConnectionError, Timeout, RequestException
 from azure.identity import ClientSecretCredential
 from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.network import NetworkManagementClient
@@ -12,16 +14,29 @@ from aliyunsdkcore.client import AcsClient
 from aliyunsdkalidns.request.v20150109 import DeleteDomainRecordRequest, AddDomainRecordRequest, \
     DescribeDomainRecordsRequest
 
+# 获取环境变量，如果环境变量不存在，则使用后面的默认值
+default_domain = os.getenv('DOMAIN', 'default_domain.com')
+default_rr = os.getenv('RR', 'default_rr')
+default_ttl = os.getenv('TTL', '1')
+default_file = os.getenv('FILE', 'default_file.txt')
+default_port = os.getenv('PORT', '8080')
+default_alikey = os.getenv('ALIKEY', 'LTAI5tE8E6TT67PQSWRJKij4')
+default_alista = os.getenv('ALISTA', 'aWuq0JtnKXZKYkt2jOvpMQDIKvo5uI')
+default_api = os.getenv('api', '159.75.83.139')
+
+
 # 解析命令行参数
 parser = argparse.ArgumentParser(description="脚本用于获取记录ID")
-parser.add_argument("--domain", type=str, required=True, help="域名")
-parser.add_argument("--rr", type=str, required=True, help="子域名")
-parser.add_argument("--ttl", type=str, default=1, help="记录值")
-parser.add_argument("--file", type=str, required=True, help="记录值")
-parser.add_argument("--port", type=int, required=True, help="记录值")
-parser.add_argument("--alikey", type=str, default='LTAI5tE8E6TT67PQSWRJKij4', help="YOUR_ACCESS_KEY_ID")
-parser.add_argument("--alista", type=str, default='aWuq0JtnKXZKYkt2jOvpMQDIKvo5uI', help="YOUR_ACCESS_SECRET")
+parser.add_argument("--domain", type=str, default=default_domain, help="域名")
+parser.add_argument("--rr", type=str, default=default_rr, help="子域名")
+parser.add_argument("--ttl", type=str, default=default_ttl, help="记录值")
+parser.add_argument("--file", type=str, default=default_file, help="文件路径")
+parser.add_argument("--port", type=int, default=int(default_port), help="端口号")
+parser.add_argument("--alikey", type=str, default=default_alikey, help="YOUR_ACCESS_KEY_ID")
+parser.add_argument("--alista", type=str, default=default_alista, help="YOUR_ACCESS_SECRET")
+parser.add_argument("--api", type=str, default=default_api, help="你的端口检测api")
 args = parser.parse_args()
+
 
 # 初始化阿里云客户端
 ali_client = AcsClient(args.alikey, args.alista, 'cn-hangzhou')
@@ -88,12 +103,11 @@ logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(le
 logger = logging.getLogger(__name__)
 
 # 检查是否能连接到指定IP和端口
-import requests
-from requests.exceptions import ConnectionError, Timeout, RequestException
+
 
 def connect(ip):
-    api_url = "http://159.75.83.139:10080/check_port"
-    retries = 6  # 设置重试次数
+    api_url = f"http://{args.api}:10080/check_port"
+    retries = 3  # 设置重试次数
 
     for attempt in range(retries):
         try:
