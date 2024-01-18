@@ -103,31 +103,35 @@ logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(le
 logger = logging.getLogger(__name__)
 
 # 检查是否能连接到指定IP和端口
-
-
 def connect(ip):
     api_url = f"http://{args.api}:10080/check_port"
-    retries = 3  # 设置重试次数
-
+    retries = 10  # 设置重试次数
     for attempt in range(retries):
         try:
             response = requests.get(api_url, params={"ip": ip, "port": args.port}, timeout=10)
             if response.status_code == 200:
                 try:
                     result = response.json()
-                    return result.get("open", False)
-                except ValueError:  # 包括JSON解码错误
-                    print("无法解析JSON响应")
+                    if result.get("open", False):
+                        return True  # 成功返回
+                    else:
+                        logger.error(f"尝试 {attempt + 1}/{retries}：API返回成功，但结果表示失败。")
+                except ValueError:
+                    logger.error(f"尝试 {attempt + 1}/{retries}：无法解析JSON响应。")
             else:
-                print(f"API返回非200状态码：{response.status_code}")
+                logger.error(f"尝试 {attempt + 1}/{retries}：API返回非200状态码：{response.status_code}")
         except ConnectionError:
-            print("连接错误")
+            logger.error(f"尝试 {attempt + 1}/{retries}：连接错误。")
         except Timeout:
-            print("请求超时")
+            logger.error(f"尝试 {attempt + 1}/{retries}：请求超时。")
         except RequestException as e:
-            print(f"请求发生错误: {e}")
+            logger.error(f"尝试 {attempt + 1}/{retries}：请求错误：{e}")
 
-        print(f"尝试 {attempt + 1}/{retries} 失败，正在重试...")
+        # 重试日志
+        if attempt < retries - 1:
+            logger.info(f"正在重试... (尝试 {attempt + 2}/{retries})")
+
+    logger.error("所有重试尝试均失败。")
     return False
 
 
