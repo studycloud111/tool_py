@@ -1,6 +1,7 @@
 import logging
 import json
 import requests
+import time
 from requests.exceptions import ConnectionError, Timeout, RequestException
 from aliyunsdkcore.client import AcsClient
 from aliyunsdkalidns.request.v20150109 import DescribeDomainRecordsRequest, DeleteDomainRecordRequest
@@ -60,5 +61,8 @@ if __name__ == "__main__":
     # 示例：请替换以下变量值
     api_url = "<your-api-url>"
     domains = ["example.com", "anotherexample.com"]  # 需要检查的域名列表
-    for domain in domains:
-        process_domain_records(api_url, domain)
+    while True:  # 永久循环，每60秒运行一次
+        for domain in domains:
+            process_domain_records(api_url, domain)
+        logger.info("等待60秒后进行下一轮检测...")
+        time.sleep(60)  # 暂停60秒
